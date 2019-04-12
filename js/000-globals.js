@@ -15,7 +15,7 @@ var handlerAttributeName = 'data-no-handler',
 /**
  * An object on the window object containing all data handlers.
  * Adding your own is a simple as:
- * window.dataHandlers.myHandler = function (data) { return data; };
+ * window.dataHandlers.myHandler = function (data, elem) { return data; };
  *
  * @type {{}}
  */
@@ -29,3 +29,12 @@ window.dataHandlers = {};
  * @type {{}}
  */
 window.handlers = {};
+
+/**
+ * An object on the window object containing all callbacks.
+ * Adding your own is a simple as:
+ * window.handlers.myCallback = function (elem) {};
+ *
+ * @type {{}}
+ */
+window.callbacks = {};

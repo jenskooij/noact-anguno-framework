@@ -10,7 +10,9 @@
  */
 window.handlers.noHandler = function (elem) {
   var dataHandlerName = elem.getAttribute('data-no-data-handler'),
-    dataHandler = window.dataHandlers.noJsonDataHandler;
+    dataHandler = window.dataHandlers.noJsonDataHandler,
+    callbackName = elem.getAttribute('data-no-callback'),
+    callback = window.callbacks.noCallback;
 
   if (isDebugEnabled()) {
     console.info("Datahandler: ", dataHandlerName);
@@ -26,9 +28,15 @@ window.handlers.noHandler = function (elem) {
     }
   }
 
-  renderEndpoint(elem.getAttribute('data-no-url'), elem, elem.getAttribute('data-no-template'), dataHandler, function (elem) {
-    elem.removeAttribute('data-no-url');
-    elem.removeAttribute('data-no-template');
-    elem.removeAttribute('data-no-data-handler');
-  });
+  if (typeof window.callbacks[callbackName] === 'function') {
+    callback = window.callbacks[callbackName];
+  } else if (isDebugEnabled()) {
+    if (callbackName !== null) {
+      console.error("Callback ", callbackName, " is not a registered callback. Please register to window.callbacks");
+    } else {
+      console.info("Using default noCallback");
+    }
+  }
+
+  renderEndpoint(elem.getAttribute('data-no-url'), elem, elem.getAttribute('data-no-template'), dataHandler, callback);
 };
