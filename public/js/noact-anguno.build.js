@@ -151,6 +151,19 @@ function renderEndpoint (url, elem, templatePath, dataHandler, callback) {
   });
 };
 /**
+ * Finds all elements that have a data-no-handler attribute
+ * and tries to find and run its handler
+ * @param elem
+ */
+function initializeHandlers (elem) {
+  var handlees = elem.querySelectorAll('[' + handlerAttributeName + ']'),
+    i;
+
+  for (i = 0; i < handlees.length; i += 1) {
+    initElement(handlees[i]);
+  }
+};
+/**
  * Default dataHandler
  *
  * Used by noHandler, basically just json parses the data
@@ -171,7 +184,7 @@ window.dataHandlers.noJsonDataHandler = function (data) {
  *
  * @param elem
  */
-window.handler.noHandler = function (elem) {
+window.handlers.noHandler = function (elem) {
   var dataHandlerName = elem.getAttribute('data-no-data-handler'),
     dataHandler = window.dataHandlers.noJsonDataHandler;
 
@@ -243,17 +256,6 @@ afterDomLoads(function () {
   initializeNoActAnguNo();
 });;
 /**
- * Returns true or false, depending on whether or not a
- * debug attribute (data-no-debug) has been placed on the
- * body tag at the time of DOM load. Variable debugMode is
- * set during initializeDebug().
- *
- * @returns {boolean}
- */
-function isDebugEnabled () {
-  return debugMode;
-};
-/**
  * Initializes one individual element
  * @param elem
  */
@@ -271,15 +273,13 @@ function initElement(elem) {
   }
 };
 /**
- * Finds all elements that have a data-no-handler attribute
- * and tries to find and run its handler
- * @param elem
+ * Returns true or false, depending on whether or not a
+ * debug attribute (data-no-debug) has been placed on the
+ * body tag at the time of DOM load. Variable debugMode is
+ * set during initializeDebug().
+ *
+ * @returns {boolean}
  */
-function initializeHandlers (elem) {
-  var handlees = elem.querySelectorAll('[' + handlerAttributeName + ']'),
-    i;
-
-  for (i = 0; i < handlees.length; i += 1) {
-    initElement(handlees[i]);
-  }
+function isDebugEnabled () {
+  return debugMode;
 };

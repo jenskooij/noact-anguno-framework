@@ -8,7 +8,7 @@
  *
  * @param elem
  */
-window.handler.noHandler = function (elem) {
+window.handlers.noHandler = function (elem) {
   var dataHandlerName = elem.getAttribute('data-no-data-handler'),
     dataHandler = window.dataHandlers.noJsonDataHandler;
 
