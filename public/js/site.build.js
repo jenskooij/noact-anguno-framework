@@ -1,13 +1,38 @@
 /* Compiled JS */
+/**
+ * The attribute in which the handlers are set for elements
+ *
+ * @type {string}
+ */
 var handlerAttributeName = 'data-no-handler',
+  /**
+   * Whether or not debugMode is enabled. Dont use
+   * directly, use isDebugEnabled() instead.
+   * @readonly
+   * @type {boolean}
+   */
   debugMode = false;
 
+/**
+ * An object on the window object containing all data handlers.
+ * Adding your own is a simple as:
+ * window.dataHandlers.myHandler = function (data) { return data; };
+ *
+ * @type {{noJsonHandler: (function(*=): any)}}
+ */
 window.dataHandlers = {
   "noJsonHandler": function (data) {
     return JSON.parse(data);
   }
 };
 
+/**
+ * An object on the window object containing all handlers.
+ * Adding your own is a simple as:
+ * window.handlers.myHandler = function (elem) {};
+ *
+ * @type {{noHandler: Window.handlers.noHandler}}
+ */
 window.handlers = {
   "noHandler": function (elem) {
     var dataHandlerName = elem.getAttribute('data-no-data-handler'),
@@ -27,7 +52,7 @@ window.handlers = {
       }
     }
 
-    renderJsonEndpoint(elem.getAttribute('data-no-url'), elem, elem.getAttribute('data-no-template'), dataHandler, function (elem) {
+    renderEndpoint(elem.getAttribute('data-no-url'), elem, elem.getAttribute('data-no-template'), dataHandler, function (elem) {
       elem.removeAttribute('data-no-url');
       elem.removeAttribute('data-no-template');
       elem.removeAttribute('data-no-data-handler');
@@ -35,8 +60,15 @@ window.handlers = {
   }
 };
 
-
-
+/**
+ * Asynchronously calls theUrl. When this is successful, calls
+ * the callback, with the retrieved data as argument. If it fails,
+ * calls the errorCallback with the data and status as arguments
+ *
+ * @param theUrl string
+ * @param callback function
+ * @param errorCallback function
+ */
 function httpGetAsync (theUrl, callback, errorCallback) {
   "use strict";
   var xmlHttp = new XMLHttpRequest();
@@ -51,6 +83,12 @@ function httpGetAsync (theUrl, callback, errorCallback) {
   xmlHttp.send(null);
 }
 
+/**
+ * Function that executes is callback function executableFunction after
+ * the entire dom is loaded.
+ *
+ * @param executableFunction function
+ */
 function afterDomLoads (executableFunction) {
   "use strict";
   if (window.attachEvent) {
@@ -94,7 +132,18 @@ function renderTemplate (html, options) {
   return new Function(code.replace(/[\r\t\n]/g, '')).apply(options);
 }
 
-function renderJsonEndpoint (url, elem, templatePath, dataHandler, callback) {
+/**
+ * Calls the url, renders the retrieved data on the given template,
+ * manipulating the data using a datahandler, optinally calling the
+ * callback function after it's done
+ *
+ * @param url
+ * @param elem
+ * @param templatePath
+ * @param dataHandler
+ * @param callback
+ */
+function renderEndpoint (url, elem, templatePath, dataHandler, callback) {
   var classNameHolder;
 
   classNameHolder = elem.className;
@@ -135,6 +184,14 @@ function renderJsonEndpoint (url, elem, templatePath, dataHandler, callback) {
   });
 }
 
+/**
+ * Returns true or false, depending on whether or not a
+ * debug attribute (data-no-debug) has been placed on the
+ * body tag at the time of DOM load. Variable debugMode is
+ * set during initializeDebug().
+ *
+ * @returns {boolean}
+ */
 function isDebugEnabled () {
   return debugMode;
 }
@@ -142,6 +199,10 @@ function isDebugEnabled () {
 afterDomLoads(function () {
   "use strict";
 
+  /**
+   * Finds all elements that have a data-no-handler attribute
+   * and tries to find and run its handler
+   */
   function initializeHandlers () {
     var handlees = document.querySelectorAll('[' + handlerAttributeName + ']'),
       i,
@@ -162,6 +223,11 @@ afterDomLoads(function () {
     }
   }
 
+  /**
+   * Determines whether or not the debug attribute data-no-debug is
+   * set on the body tag and sets debugMode to true or false accordingly.
+   * Removes the data attribute afterwards.
+   */
   function initializeDebug () {
     var body = document.getElementsByTagName('body')[0];
     if (body !== undefined && body.hasAttribute('data-no-debug')) {
@@ -174,6 +240,9 @@ afterDomLoads(function () {
     }
   }
 
+  /**
+   * Initializes the framework.
+   */
   function initializeNoActAnguNo () {
     initializeDebug();
     initializeHandlers();
@@ -181,4 +250,3 @@ afterDomLoads(function () {
 
   initializeNoActAnguNo();
 });;
-;
