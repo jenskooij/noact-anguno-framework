@@ -1,0 +1,16 @@
+{
+  "name": "skeleton-frontend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "nodemon --watch scss --watch js --watch build -e js,scss index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Jens Kooij",
+  "license": "MIT",
+  "dependencies": {
+    "cloud-control-frontend": "^1.0",
+    "nodemon": "^1"
+  }
+}

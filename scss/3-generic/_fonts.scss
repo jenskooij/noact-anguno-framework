@@ -1,0 +1,42 @@
+html, body {
+  font-size: $primary-font-size;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: $title-font;
+  font-weight: $primary-font-weight-bold;
+  color: $primary-font-color;
+}
+
+p, i, em, b, strong, u, span, label, input, textarea, a, td, th {
+  font-family: $primary-font;
+  color: $primary-font-color;
+  font-size: 1em;
+  font-weight: $primary-font-weight;
+  line-height:1.2em;
+}
+
+b, strong, th {
+  font-weight: $primary-font-weight-bold;
+}
+
+i.material-icons {
+  vertical-align: text-bottom;
+}
+
+%title-font {
+  font-family: $title-font;
+  font-weight: 900;
+  font-size: $title-font-size;
+  line-height: 1.2em;
+
+  em {
+    color: $title-em-font-color;
+    font-family: $title-font;
+    font-weight: $title-font-weight;
+  }
+}
+
+h1.title {
+  @extend %title-font;
+}

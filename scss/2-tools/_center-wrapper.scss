@@ -1,0 +1,19 @@
+.center-wrapper {
+  display: table;
+  height: 100%;
+  max-width: $container-max-width;
+  width: 90%;
+  margin: 0 auto;
+
+  @media #{$medium-and-up} {
+    width: 85%;
+  }
+  @media #{$large-and-up} {
+    width: 70%;
+  }
+
+  > .container {
+    display: table-cell;
+    vertical-align: middle;
+  }
+}
