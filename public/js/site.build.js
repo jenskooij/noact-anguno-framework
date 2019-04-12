@@ -2,16 +2,42 @@
 var handlerAttributeName = 'data-no-handler',
   debugMode = false;
 
+window.dataHandlers = {
+  "noJsonHandler": function (data) {
+    return JSON.parse(data);
+  }
+};
+
 window.handlers = {
   "noHandler": function (elem) {
-    renderJsonEndpoint(elem.getAttribute('data-no-url'), elem, elem.getAttribute('data-no-template'), null, function (elem) {
+    var dataHandlerName = elem.getAttribute('data-no-data-handler'),
+      dataHandler = window.dataHandlers.noJsonHandler;
+
+    if (isDebugEnabled()) {
+      console.info("Datahandler: ", dataHandlerName);
+    }
+
+    if (typeof window.dataHandlers[dataHandlerName] === 'function') {
+      dataHandler = window.dataHandlers[dataHandlerName];
+    } else if (isDebugEnabled()) {
+      if (dataHandlerName !== null) {
+        console.error("Datahandler ", dataHandlerName, " is not a registered handler. Please register to window.dataHandlers");
+      } else {
+        console.info("Using default noJsonHandler");
+      }
+    }
+
+    renderJsonEndpoint(elem.getAttribute('data-no-url'), elem, elem.getAttribute('data-no-template'), dataHandler, function (elem) {
       elem.removeAttribute('data-no-url');
       elem.removeAttribute('data-no-template');
+      elem.removeAttribute('data-no-data-handler');
     });
   }
 };
 
-function httpGetAsync(theUrl, callback, errorCallback) {
+
+
+function httpGetAsync (theUrl, callback, errorCallback) {
   "use strict";
   var xmlHttp = new XMLHttpRequest();
   xmlHttp.onreadystatechange = function () {
@@ -51,14 +77,15 @@ function afterDomLoads (executableFunction) {
  * @param options Data object of variables exposed to the template
  * @returns string The rendered html
  */
-function renderTemplate(html, options) {
-  var re = /<%([^%>]+)?%>/g, reExp = /(^( )?(if|for|else|switch|case|break|{|}))(.*)?/g, code = 'var r=[];\n', cursor = 0, match;
-  var add = function(line, js) {
-    js? (code += line.match(reExp) ? line + '\n' : 'r.push(' + line + ');\n') :
+function renderTemplate (html, options) {
+  var re = /<%([^%>]+)?%>/g, reExp = /(^( )?(if|for|else|switch|case|break|{|}))(.*)?/g, code = 'var r=[];\n',
+    cursor = 0, match;
+  var add = function (line, js) {
+    js ? (code += line.match(reExp) ? line + '\n' : 'r.push(' + line + ');\n') :
       (code += line != '' ? 'r.push("' + line.replace(/"/g, '\\"') + '");\n' : '');
     return add;
   }
-  while(match = re.exec(html)) {
+  while (match = re.exec(html)) {
     add(html.slice(cursor, match.index))(match[1], true);
     cursor = match.index + match[0].length;
   }
@@ -67,7 +94,7 @@ function renderTemplate(html, options) {
   return new Function(code.replace(/[\r\t\n]/g, '')).apply(options);
 }
 
-function renderJsonEndpoint(url, elem, templatePath, dataHandler, callback) {
+function renderJsonEndpoint (url, elem, templatePath, dataHandler, callback) {
   var classNameHolder;
 
   classNameHolder = elem.className;
@@ -79,8 +106,15 @@ function renderJsonEndpoint(url, elem, templatePath, dataHandler, callback) {
       console.info("Retrieved data ", templateOptionsData, " from ", url);
     }
 
+    if (typeof dataHandler === 'function') {
+      templateOptionsData = dataHandler(templateOptionsData);
+      if (isDebugEnabled()) {
+        console.info("Transformed data into ", templateOptionsData);
+      }
+    }
+
     httpGetAsync(templatePath, function (data) {
-      var renderedHtml = renderTemplate(data, JSON.parse(templateOptionsData));
+      var renderedHtml = renderTemplate(data, templateOptionsData);
       elem.innerHTML = renderedHtml;
 
       if (typeof callback === 'function') {
@@ -101,12 +135,13 @@ function renderJsonEndpoint(url, elem, templatePath, dataHandler, callback) {
   });
 }
 
-function isDebugEnabled() {
+function isDebugEnabled () {
   return debugMode;
 }
 
 afterDomLoads(function () {
   "use strict";
+
   function initializeHandlers () {
     var handlees = document.querySelectorAll('[' + handlerAttributeName + ']'),
       i,
@@ -135,17 +170,15 @@ afterDomLoads(function () {
         console.info('Debug mode is enabled.');
         debugMode = true;
       }
+      body.removeAttribute('data-no-debug');
     }
   }
 
-  function initializeNoActAnguNo() {
+  function initializeNoActAnguNo () {
     initializeDebug();
     initializeHandlers();
   }
 
   initializeNoActAnguNo();
 });;
-window.handlers.mainContent = function (elem) {
-  "use strict";
-  renderJsonEndpoint('https://www.kngf.nl/api/news', elem, 'no-templates/news.html');
-};;
+;
