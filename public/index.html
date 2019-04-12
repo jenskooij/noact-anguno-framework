@@ -18,14 +18,6 @@
 
           return limitedData;
         };
-
-        window.callbacks.newsCallback = function (elem) {
-          elem.removeAttribute('data-no-url');
-          elem.removeAttribute('data-no-template');
-          elem.removeAttribute('data-no-data-handler');
-          elem.removeAttribute('data-no-callback');
-          initializeHandlers(elem); // Makes sure that the rendered HTML also gets treated by the framework
-        };
       });
     </script>
     <link rel="stylesheet" href="css/site.css" />
@@ -39,7 +31,6 @@
          data-no-data-handler="newsDataHandler"
          data-no-url="https://hacker-news.firebaseio.com/v0/topstories.json"
          data-no-template="no-templates/news.html"
-         data-no-callback="newsCallback"
          data-item-limit="10"></div>
     <script async src="js/noact-anguno.build.js"></script>
   </body>

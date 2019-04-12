@@ -62,29 +62,6 @@ function httpGetAsync (theUrl, callback, errorCallback) {
   xmlHttp.send(null);
 };
 /**
- * Function that executes is callback function executableFunction after
- * the entire dom is loaded.
- *
- * @param executableFunction function
- */
-function afterDomLoads (executableFunction) {
-  "use strict";
-  if (window.attachEvent) {
-    window.attachEvent('onload', executableFunction);
-  } else {
-    if (window.onload) {
-      var curronload = window.onload;
-      var newonload = function (evt) {
-        curronload(evt);
-        executableFunction(evt);
-      };
-      window.onload = newonload;
-    } else {
-      window.onload = executableFunction;
-    }
-  }
-};
-/**
  * Renders html from template
  * http://krasimirtsonev.com/blog/article/Javascript-template-engine-in-just-20-line
  *
@@ -107,6 +84,29 @@ function renderTemplate (html, options) {
   add(html.substr(cursor, html.length - cursor));
   code += 'return r.join("");';
   return new Function(code.replace(/[\r\t\n]/g, '')).apply(options);
+};
+/**
+ * Function that executes is callback function executableFunction after
+ * the entire dom is loaded.
+ *
+ * @param executableFunction function
+ */
+function afterDomLoads (executableFunction) {
+  "use strict";
+  if (window.attachEvent) {
+    window.attachEvent('onload', executableFunction);
+  } else {
+    if (window.onload) {
+      var curronload = window.onload;
+      var newonload = function (evt) {
+        curronload(evt);
+        executableFunction(evt);
+      };
+      window.onload = newonload;
+    } else {
+      window.onload = executableFunction;
+    }
+  }
 };
 /**
  * Calls the url, renders the retrieved data on the given template,
@@ -160,16 +160,20 @@ function renderEndpoint (url, elem, templatePath, dataHandler, callback) {
   });
 };
 /**
- * Finds all elements that have a data-no-handler attribute
- * and tries to find and run its handler
+ * Initializes one individual element
  * @param elem
  */
-function initializeHandlers (elem) {
-  var handlees = elem.querySelectorAll('[' + handlerAttributeName + ']'),
-    i;
+function initElement(elem) {
+  var handlerName = elem.getAttribute(handlerAttributeName);
 
-  for (i = 0; i < handlees.length; i += 1) {
-    initElement(handlees[i]);
+  if (typeof window.handlers[handlerName] === 'function') {
+    if (isDebugEnabled()) {
+      console.info('Executing `', handlerName, "` for element ", elem);
+    }
+    window.handlers[handlerName](elem);
+    elem.removeAttribute(handlerAttributeName);
+  } else {
+    console.error('Element ', elem, " has invalid handler `", handlerName, "`");
   }
 };
 /**
@@ -225,12 +229,6 @@ window.handlers.noHandler = function (elem) {
 
   renderEndpoint(elem.getAttribute('data-no-url'), elem, elem.getAttribute('data-no-template'), dataHandler, callback);
 };;
-window.callbacks.noCallback = function (elem) {
-  elem.removeAttribute('data-no-url');
-  elem.removeAttribute('data-no-template');
-  elem.removeAttribute('data-no-data-handler');
-  elem.removeAttribute('data-no-callback');
-};;
 afterDomLoads(function () {
   "use strict";
 
@@ -279,23 +277,6 @@ afterDomLoads(function () {
   initializeNoActAnguNo();
 });;
 /**
- * Initializes one individual element
- * @param elem
- */
-function initElement(elem) {
-  var handlerName = elem.getAttribute(handlerAttributeName);
-
-  if (typeof window.handlers[handlerName] === 'function') {
-    if (isDebugEnabled()) {
-      console.info('Executing `', handlerName, "` for element ", elem);
-    }
-    window.handlers[handlerName](elem);
-    elem.removeAttribute(handlerAttributeName);
-  } else {
-    console.error('Element ', elem, " has invalid handler `", handlerName, "`");
-  }
-};
-/**
  * Returns true or false, depending on whether or not a
  * debug attribute (data-no-debug) has been placed on the
  * body tag at the time of DOM load. Variable debugMode is
@@ -306,3 +287,23 @@ function initElement(elem) {
 function isDebugEnabled () {
   return debugMode;
 };
+/**
+ * Finds all elements that have a data-no-handler attribute
+ * and tries to find and run its handler
+ * @param elem
+ */
+function initializeHandlers (elem) {
+  var handlees = elem.querySelectorAll('[' + handlerAttributeName + ']'),
+    i;
+
+  for (i = 0; i < handlees.length; i += 1) {
+    initElement(handlees[i]);
+  }
+};
+window.callbacks.noCallback = function (elem) {
+  elem.removeAttribute('data-no-url');
+  elem.removeAttribute('data-no-template');
+  elem.removeAttribute('data-no-data-handler');
+  elem.removeAttribute('data-no-callback');
+  initializeHandlers(elem); // Makes sure that the rendered HTML also gets treated by the framework
+};;
