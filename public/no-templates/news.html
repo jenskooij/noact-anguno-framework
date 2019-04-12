@@ -1,6 +1,9 @@
-<h1>Nieuws</h1>
+<h1>Hacker News</h1>
 <ul>
-  <%for(var index in this._result) {%>
-  <li><% this._result[index].publicationdate %> - <% this._result[index].title %></li>
+  <%for(var index in this) {%>
+  <li class="news-item"
+      data-no-handler="newsItemHandler"
+      data-no-url="https://hacker-news.firebaseio.com/v0/item/<% this[index] %>.json"
+      data-no-template="no-templates/news-item.html"></li>
   <%}%>
 </ul>

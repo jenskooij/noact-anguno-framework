@@ -21,7 +21,7 @@ var handlerAttributeName = 'data-no-handler',
  * @type {{noJsonHandler: (function(*=): any)}}
  */
 window.dataHandlers = {
-  "noJsonHandler": function (data) {
+  "noJsonHandler": function (data, elem) {
     return JSON.parse(data);
   }
 };
@@ -156,7 +156,7 @@ function renderEndpoint (url, elem, templatePath, dataHandler, callback) {
     }
 
     if (typeof dataHandler === 'function') {
-      templateOptionsData = dataHandler(templateOptionsData);
+      templateOptionsData = dataHandler(templateOptionsData, elem);
       if (isDebugEnabled()) {
         console.info("Transformed data into ", templateOptionsData);
       }
@@ -196,32 +196,40 @@ function isDebugEnabled () {
   return debugMode;
 }
 
+/**
+ * Initializes one individual element
+ * @param elem
+ */
+function initElement(elem) {
+  var handlerName = elem.getAttribute(handlerAttributeName);
+
+  if (typeof window.handlers[handlerName] === 'function') {
+    if (isDebugEnabled()) {
+      console.info('Executing `', handlerName, "` for element ", elem);
+    }
+    window.handlers[handlerName](elem);
+    elem.removeAttribute(handlerAttributeName);
+  } else {
+    console.error('Element ', elem, " has invalid handler `", handlerName, "`");
+  }
+}
+
+/**
+ * Finds all elements that have a data-no-handler attribute
+ * and tries to find and run its handler
+ * @param elem
+ */
+function initializeHandlers (elem) {
+  var handlees = elem.querySelectorAll('[' + handlerAttributeName + ']'),
+    i;
+
+  for (i = 0; i < handlees.length; i += 1) {
+    initElement(handlees[i]);
+  }
+}
+
 afterDomLoads(function () {
   "use strict";
-
-  /**
-   * Finds all elements that have a data-no-handler attribute
-   * and tries to find and run its handler
-   */
-  function initializeHandlers () {
-    var handlees = document.querySelectorAll('[' + handlerAttributeName + ']'),
-      i,
-      handlerName;
-
-    for (i = 0; i < handlees.length; i += 1) {
-      handlerName = handlees[i].getAttribute(handlerAttributeName);
-
-      if (typeof window.handlers[handlerName] === 'function') {
-        if (isDebugEnabled()) {
-          console.info('Executing `', handlerName, "` for element ", handlees[i]);
-        }
-        window.handlers[handlerName](handlees[i]);
-        handlees[i].removeAttribute(handlerAttributeName);
-      } else {
-        console.error('Element ', handlees[i], " has invalid handler `", handlerName, "`");
-      }
-    }
-  }
 
   /**
    * Determines whether or not the debug attribute data-no-debug is
@@ -241,11 +249,28 @@ afterDomLoads(function () {
   }
 
   /**
+   * Dispatches an event from the window event so they can be picked up upon
+   *
+   * @param name
+   */
+  function dispatchEvent (name) {
+    var event = new Event(name);
+    window.dispatchEvent(event);
+    if (isDebugEnabled()) {
+      console.info("Event fired `", name, "`");
+    }
+  }
+
+  /**
    * Initializes the framework.
    */
   function initializeNoActAnguNo () {
+    dispatchEvent('no-initial-dom-loaded');
     initializeDebug();
-    initializeHandlers();
+    dispatchEvent('no-debug-initialized');
+    dispatchEvent('no-dom-loaded');
+    initializeHandlers(document);
+    dispatchEvent('no-handlers-initialized');
   }
 
   initializeNoActAnguNo();
