@@ -22,15 +22,14 @@ function renderEndpoint (url, elem, templatePath, dataHandler, callback) {
     }
 
     if (typeof dataHandler === 'function') {
-      templateOptionsData = dataHandler(templateOptionsData);
+      templateOptionsData = dataHandler(templateOptionsData, elem);
       if (isDebugEnabled()) {
         console.info("Transformed data into ", templateOptionsData);
       }
     }
 
     httpGetAsync(templatePath, function (data) {
-      var renderedHtml = renderTemplate(data, templateOptionsData);
-      elem.innerHTML = renderedHtml;
+      elem.innerHTML = renderTemplate(data, templateOptionsData);
 
       if (typeof callback === 'function') {
         callback(elem);

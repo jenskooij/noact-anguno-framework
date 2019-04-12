@@ -53,29 +53,6 @@ function httpGetAsync (theUrl, callback, errorCallback) {
   xmlHttp.send(null);
 };
 /**
- * Function that executes is callback function executableFunction after
- * the entire dom is loaded.
- *
- * @param executableFunction function
- */
-function afterDomLoads (executableFunction) {
-  "use strict";
-  if (window.attachEvent) {
-    window.attachEvent('onload', executableFunction);
-  } else {
-    if (window.onload) {
-      var curronload = window.onload;
-      var newonload = function (evt) {
-        curronload(evt);
-        executableFunction(evt);
-      };
-      window.onload = newonload;
-    } else {
-      window.onload = executableFunction;
-    }
-  }
-};
-/**
  * Renders html from template
  * http://krasimirtsonev.com/blog/article/Javascript-template-engine-in-just-20-line
  *
@@ -98,6 +75,29 @@ function renderTemplate (html, options) {
   add(html.substr(cursor, html.length - cursor));
   code += 'return r.join("");';
   return new Function(code.replace(/[\r\t\n]/g, '')).apply(options);
+};
+/**
+ * Function that executes is callback function executableFunction after
+ * the entire dom is loaded.
+ *
+ * @param executableFunction function
+ */
+function afterDomLoads (executableFunction) {
+  "use strict";
+  if (window.attachEvent) {
+    window.attachEvent('onload', executableFunction);
+  } else {
+    if (window.onload) {
+      var curronload = window.onload;
+      var newonload = function (evt) {
+        curronload(evt);
+        executableFunction(evt);
+      };
+      window.onload = newonload;
+    } else {
+      window.onload = executableFunction;
+    }
+  }
 };
 /**
  * Calls the url, renders the retrieved data on the given template,
@@ -123,15 +123,14 @@ function renderEndpoint (url, elem, templatePath, dataHandler, callback) {
     }
 
     if (typeof dataHandler === 'function') {
-      templateOptionsData = dataHandler(templateOptionsData);
+      templateOptionsData = dataHandler(templateOptionsData, elem);
       if (isDebugEnabled()) {
         console.info("Transformed data into ", templateOptionsData);
       }
     }
 
     httpGetAsync(templatePath, function (data) {
-      var renderedHtml = renderTemplate(data, templateOptionsData);
-      elem.innerHTML = renderedHtml;
+      elem.innerHTML = renderTemplate(data, templateOptionsData);
 
       if (typeof callback === 'function') {
         callback(elem);
@@ -171,7 +170,7 @@ function initializeHandlers (elem) {
  * @param data
  * @returns {any}
  */
-window.dataHandlers.noJsonDataHandler = function (data) {
+window.dataHandlers.noJsonDataHandler = function (data, elem) {
   return JSON.parse(data);
 };;
 /**
@@ -256,6 +255,17 @@ afterDomLoads(function () {
   initializeNoActAnguNo();
 });;
 /**
+ * Returns true or false, depending on whether or not a
+ * debug attribute (data-no-debug) has been placed on the
+ * body tag at the time of DOM load. Variable debugMode is
+ * set during initializeDebug().
+ *
+ * @returns {boolean}
+ */
+function isDebugEnabled () {
+  return debugMode;
+};
+/**
  * Initializes one individual element
  * @param elem
  */
@@ -271,15 +281,4 @@ function initElement(elem) {
   } else {
     console.error('Element ', elem, " has invalid handler `", handlerName, "`");
   }
-};
-/**
- * Returns true or false, depending on whether or not a
- * debug attribute (data-no-debug) has been placed on the
- * body tag at the time of DOM load. Variable debugMode is
- * set during initializeDebug().
- *
- * @returns {boolean}
- */
-function isDebugEnabled () {
-  return debugMode;
 };

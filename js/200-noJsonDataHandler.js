@@ -6,6 +6,6 @@
  * @param data
  * @returns {any}
  */
-window.dataHandlers.noJsonDataHandler = function (data) {
+window.dataHandlers.noJsonDataHandler = function (data, elem) {
   return JSON.parse(data);
 };
