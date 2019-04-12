@@ -2,7 +2,7 @@
 <ul>
   <%for(var index in this) {%>
   <li class="news-item"
-      data-no-handler="newsItemHandler"
+      data-no-handler="noHandler"
       data-no-url="https://hacker-news.firebaseio.com/v0/item/<% this[index] %>.json"
       data-no-template="no-templates/news-item.html"></li>
   <%}%>

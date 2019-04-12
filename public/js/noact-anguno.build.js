@@ -40,6 +40,51 @@ window.handlers = {};
  */
 window.callbacks = {};;
 /**
+ * Asynchronously calls theUrl. When this is successful, calls
+ * the callback, with the retrieved data as argument. If it fails,
+ * calls the errorCallback with the data and status as arguments
+ *
+ * @param theUrl string
+ * @param callback function
+ * @param errorCallback function
+ */
+function httpGetAsync (theUrl, callback, errorCallback) {
+  "use strict";
+  var xmlHttp = new XMLHttpRequest();
+  xmlHttp.onreadystatechange = function () {
+    if (xmlHttp.readyState === 4 && xmlHttp.status === 200) {
+      callback(xmlHttp.responseText);
+    } else if (xmlHttp.readyState === 4 && xmlHttp.status !== 200) {
+      errorCallback(xmlHttp.responseText, xmlHttp.status);
+    }
+  };
+  xmlHttp.open("GET", theUrl, true); // true for asynchronous
+  xmlHttp.send(null);
+};
+/**
+ * Function that executes is callback function executableFunction after
+ * the entire dom is loaded.
+ *
+ * @param executableFunction function
+ */
+function afterDomLoads (executableFunction) {
+  "use strict";
+  if (window.attachEvent) {
+    window.attachEvent('onload', executableFunction);
+  } else {
+    if (window.onload) {
+      var curronload = window.onload;
+      var newonload = function (evt) {
+        curronload(evt);
+        executableFunction(evt);
+      };
+      window.onload = newonload;
+    } else {
+      window.onload = executableFunction;
+    }
+  }
+};
+/**
  * Renders html from template
  * http://krasimirtsonev.com/blog/article/Javascript-template-engine-in-just-20-line
  *
@@ -81,7 +126,6 @@ function renderEndpoint (url, elem, templatePath, dataHandler, callback) {
   elem.className = classNameHolder + ' no-loading';
 
   httpGetAsync(url, function (templateOptionsData) {
-    elem.className = classNameHolder;
     if (isDebugEnabled()) {
       console.info("Retrieved data ", templateOptionsData, " from ", url);
     }
@@ -95,12 +139,14 @@ function renderEndpoint (url, elem, templatePath, dataHandler, callback) {
 
     httpGetAsync(templatePath, function (data) {
       elem.innerHTML = renderTemplate(data, templateOptionsData);
+      elem.className = classNameHolder;
 
       if (typeof callback === 'function') {
         callback(elem);
       }
     }, function (data, status) {
       console.error("Couldn't retrieve template from path: ", templatePath, ", status ", status);
+      elem.className = classNameHolder + ' no-error';
       if (typeof callback === 'function') {
         callback(elem);
       }
@@ -112,57 +158,6 @@ function renderEndpoint (url, elem, templatePath, dataHandler, callback) {
       callback(elem);
     }
   });
-};
-/**
- * Returns true or false, depending on whether or not a
- * debug attribute (data-no-debug) has been placed on the
- * body tag at the time of DOM load. Variable debugMode is
- * set during initializeDebug().
- *
- * @returns {boolean}
- */
-function isDebugEnabled () {
-  return debugMode;
-};
-/**
- * Initializes one individual element
- * @param elem
- */
-function initElement(elem) {
-  var handlerName = elem.getAttribute(handlerAttributeName);
-
-  if (typeof window.handlers[handlerName] === 'function') {
-    if (isDebugEnabled()) {
-      console.info('Executing `', handlerName, "` for element ", elem);
-    }
-    window.handlers[handlerName](elem);
-    elem.removeAttribute(handlerAttributeName);
-  } else {
-    console.error('Element ', elem, " has invalid handler `", handlerName, "`");
-  }
-};
-/**
- * Function that executes is callback function executableFunction after
- * the entire dom is loaded.
- *
- * @param executableFunction function
- */
-function afterDomLoads (executableFunction) {
-  "use strict";
-  if (window.attachEvent) {
-    window.attachEvent('onload', executableFunction);
-  } else {
-    if (window.onload) {
-      var curronload = window.onload;
-      var newonload = function (evt) {
-        curronload(evt);
-        executableFunction(evt);
-      };
-      window.onload = newonload;
-    } else {
-      window.onload = executableFunction;
-    }
-  }
 };
 /**
  * Finds all elements that have a data-no-handler attribute
@@ -178,27 +173,16 @@ function initializeHandlers (elem) {
   }
 };
 /**
- * Asynchronously calls theUrl. When this is successful, calls
- * the callback, with the retrieved data as argument. If it fails,
- * calls the errorCallback with the data and status as arguments
+ * Default dataHandler
  *
- * @param theUrl string
- * @param callback function
- * @param errorCallback function
+ * Used by noHandler, basically just json parses the data
+ *
+ * @param data
+ * @returns {any}
  */
-function httpGetAsync (theUrl, callback, errorCallback) {
-  "use strict";
-  var xmlHttp = new XMLHttpRequest();
-  xmlHttp.onreadystatechange = function () {
-    if (xmlHttp.readyState === 4 && xmlHttp.status === 200) {
-      callback(xmlHttp.responseText);
-    } else if (xmlHttp.readyState === 4 && xmlHttp.status !== 200) {
-      errorCallback(xmlHttp.responseText, xmlHttp.status);
-    }
-  };
-  xmlHttp.open("GET", theUrl, true); // true for asynchronous
-  xmlHttp.send(null);
-};
+window.dataHandlers.noJsonDataHandler = function (data, elem) {
+  return JSON.parse(data);
+};;
 /**
  * Default handler
  *
@@ -247,17 +231,6 @@ window.callbacks.noCallback = function (elem) {
   elem.removeAttribute('data-no-data-handler');
   elem.removeAttribute('data-no-callback');
 };;
-/**
- * Default dataHandler
- *
- * Used by noHandler, basically just json parses the data
- *
- * @param data
- * @returns {any}
- */
-window.dataHandlers.noJsonDataHandler = function (data, elem) {
-  return JSON.parse(data);
-};;
 afterDomLoads(function () {
   "use strict";
 
@@ -305,3 +278,31 @@ afterDomLoads(function () {
 
   initializeNoActAnguNo();
 });;
+/**
+ * Initializes one individual element
+ * @param elem
+ */
+function initElement(elem) {
+  var handlerName = elem.getAttribute(handlerAttributeName);
+
+  if (typeof window.handlers[handlerName] === 'function') {
+    if (isDebugEnabled()) {
+      console.info('Executing `', handlerName, "` for element ", elem);
+    }
+    window.handlers[handlerName](elem);
+    elem.removeAttribute(handlerAttributeName);
+  } else {
+    console.error('Element ', elem, " has invalid handler `", handlerName, "`");
+  }
+};
+/**
+ * Returns true or false, depending on whether or not a
+ * debug attribute (data-no-debug) has been placed on the
+ * body tag at the time of DOM load. Variable debugMode is
+ * set during initializeDebug().
+ *
+ * @returns {boolean}
+ */
+function isDebugEnabled () {
+  return debugMode;
+};

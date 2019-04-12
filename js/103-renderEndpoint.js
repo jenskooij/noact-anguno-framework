@@ -16,7 +16,6 @@ function renderEndpoint (url, elem, templatePath, dataHandler, callback) {
   elem.className = classNameHolder + ' no-loading';
 
   httpGetAsync(url, function (templateOptionsData) {
-    elem.className = classNameHolder;
     if (isDebugEnabled()) {
       console.info("Retrieved data ", templateOptionsData, " from ", url);
     }
@@ -30,12 +29,14 @@ function renderEndpoint (url, elem, templatePath, dataHandler, callback) {
 
     httpGetAsync(templatePath, function (data) {
       elem.innerHTML = renderTemplate(data, templateOptionsData);
+      elem.className = classNameHolder;
 
       if (typeof callback === 'function') {
         callback(elem);
       }
     }, function (data, status) {
       console.error("Couldn't retrieve template from path: ", templatePath, ", status ", status);
+      elem.className = classNameHolder + ' no-error';
       if (typeof callback === 'function') {
         callback(elem);
       }

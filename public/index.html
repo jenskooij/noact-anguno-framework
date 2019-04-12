@@ -6,69 +6,40 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <script>
       window.addEventListener('no-dom-loaded', function () {
-        window.handlers.newsHandler = function (elem) {
-          renderEndpoint(elem.getAttribute('data-no-url'), elem, elem.getAttribute('data-no-template'), function (data, elem) {
-            var limitedData = [],
-              jsonData = JSON.parse(data),
-              i,
-              limit = elem.hasAttribute('data-item-limit') ? elem.getAttribute('data-item-limit') : 10;
+        window.dataHandlers.newsDataHandler = function (data, elem) {
+          var limitedData = [],
+            jsonData = JSON.parse(data),
+            i,
+            limit = elem.hasAttribute('data-item-limit') ? elem.getAttribute('data-item-limit') : 10;
 
-            for (i = 0; i < limit; i += 1) {
-              limitedData[i] = jsonData[i];
-            }
+          for (i = 0; i < limit; i += 1) {
+            limitedData[i] = jsonData[i];
+          }
 
-            return limitedData;
-          }, function (elem) {
-            elem.removeAttribute('data-no-url');
-            elem.removeAttribute('data-no-template');
-            elem.removeAttribute('data-no-data-handler');
-            initializeHandlers(elem); // Makes sure that the rendered HTML also gets treated by the framework
-          });
+          return limitedData;
         };
-        window.handlers.newsItemHandler = function (elem) {
-          var classNameHolder = elem.className;
-          elem.className = classNameHolder + ' no-loading';
-          renderEndpoint(elem.getAttribute('data-no-url'), elem, elem.getAttribute('data-no-template'), JSON.parse, function (elem) {
-            elem.removeAttribute('data-no-url');
-            elem.removeAttribute('data-no-template');
-            elem.removeAttribute('data-no-data-handler');
-            elem.className = classNameHolder;
-          });
+
+        window.callbacks.newsCallback = function (elem) {
+          elem.removeAttribute('data-no-url');
+          elem.removeAttribute('data-no-template');
+          elem.removeAttribute('data-no-data-handler');
+          elem.removeAttribute('data-no-callback');
+          initializeHandlers(elem); // Makes sure that the rendered HTML also gets treated by the framework
         };
       });
     </script>
+    <link rel="stylesheet" href="css/site.css" />
     <style>
-      @keyframes spinner {
-        to {transform: rotate(360deg);}
-      }
 
-      .no-loading:before {
-        display: block;
-        content: '';
-        box-sizing: border-box;
-        width: 20px;
-        height: 20px;
-        border-radius: 50%;
-        border: 2px solid #ccc;
-        border-top-color: #333;
-        animation: spinner .6s linear infinite;
-        position: absolute;
-      }
-
-      li.no-loading {
-        margin-top:-18px;
-      }
-
-      .no-error {
-        background-color:#f00;
-      }
     </style>
   </head>
   <body data-no-debug="true">
     <div class="news"
-         data-no-handler="newsHandler"
+         data-no-handler="noHandler"
+         data-no-data-handler="newsDataHandler"
          data-no-url="https://hacker-news.firebaseio.com/v0/topstories.json"
          data-no-template="no-templates/news.html"
+         data-no-callback="newsCallback"
          data-item-limit="10"></div>
     <script async src="js/noact-anguno.build.js"></script>
   </body>
