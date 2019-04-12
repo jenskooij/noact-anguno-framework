@@ -18,48 +18,18 @@ var handlerAttributeName = 'data-no-handler',
  * Adding your own is a simple as:
  * window.dataHandlers.myHandler = function (data) { return data; };
  *
- * @type {{noJsonHandler: (function(*=): any)}}
+ * @type {{}}
  */
-window.dataHandlers = {
-  "noJsonHandler": function (data, elem) {
-    return JSON.parse(data);
-  }
-};
+window.dataHandlers = {};
 
 /**
  * An object on the window object containing all handlers.
  * Adding your own is a simple as:
  * window.handlers.myHandler = function (elem) {};
  *
- * @type {{noHandler: Window.handlers.noHandler}}
+ * @type {{}}
  */
-window.handlers = {
-  "noHandler": function (elem) {
-    var dataHandlerName = elem.getAttribute('data-no-data-handler'),
-      dataHandler = window.dataHandlers.noJsonHandler;
-
-    if (isDebugEnabled()) {
-      console.info("Datahandler: ", dataHandlerName);
-    }
-
-    if (typeof window.dataHandlers[dataHandlerName] === 'function') {
-      dataHandler = window.dataHandlers[dataHandlerName];
-    } else if (isDebugEnabled()) {
-      if (dataHandlerName !== null) {
-        console.error("Datahandler ", dataHandlerName, " is not a registered handler. Please register to window.dataHandlers");
-      } else {
-        console.info("Using default noJsonHandler");
-      }
-    }
-
-    renderEndpoint(elem.getAttribute('data-no-url'), elem, elem.getAttribute('data-no-template'), dataHandler, function (elem) {
-      elem.removeAttribute('data-no-url');
-      elem.removeAttribute('data-no-template');
-      elem.removeAttribute('data-no-data-handler');
-    });
-  }
-};
-
+window.handlers = {};;
 /**
  * Asynchronously calls theUrl. When this is successful, calls
  * the callback, with the retrieved data as argument. If it fails,
@@ -81,8 +51,7 @@ function httpGetAsync (theUrl, callback, errorCallback) {
   };
   xmlHttp.open("GET", theUrl, true); // true for asynchronous
   xmlHttp.send(null);
-}
-
+};
 /**
  * Function that executes is callback function executableFunction after
  * the entire dom is loaded.
@@ -105,8 +74,7 @@ function afterDomLoads (executableFunction) {
       window.onload = executableFunction;
     }
   }
-}
-
+};
 /**
  * Renders html from template
  * http://krasimirtsonev.com/blog/article/Javascript-template-engine-in-just-20-line
@@ -130,8 +98,7 @@ function renderTemplate (html, options) {
   add(html.substr(cursor, html.length - cursor));
   code += 'return r.join("");';
   return new Function(code.replace(/[\r\t\n]/g, '')).apply(options);
-}
-
+};
 /**
  * Calls the url, renders the retrieved data on the given template,
  * manipulating the data using a datahandler, optinally calling the
@@ -156,7 +123,7 @@ function renderEndpoint (url, elem, templatePath, dataHandler, callback) {
     }
 
     if (typeof dataHandler === 'function') {
-      templateOptionsData = dataHandler(templateOptionsData, elem);
+      templateOptionsData = dataHandler(templateOptionsData);
       if (isDebugEnabled()) {
         console.info("Transformed data into ", templateOptionsData);
       }
@@ -182,52 +149,52 @@ function renderEndpoint (url, elem, templatePath, dataHandler, callback) {
       callback(elem);
     }
   });
-}
-
+};
 /**
- * Returns true or false, depending on whether or not a
- * debug attribute (data-no-debug) has been placed on the
- * body tag at the time of DOM load. Variable debugMode is
- * set during initializeDebug().
+ * Default dataHandler
  *
- * @returns {boolean}
+ * Used by noHandler, basically just json parses the data
+ *
+ * @param data
+ * @returns {any}
  */
-function isDebugEnabled () {
-  return debugMode;
-}
-
+window.dataHandlers.noJsonDataHandler = function (data) {
+  return JSON.parse(data);
+};;
 /**
- * Initializes one individual element
+ * Default handler
+ *
+ * Retrives the url as passed in through the data-no-url attribute,
+ * Renders the template from the data-no-template attribute
+ * Optionally uses a set data handler in data-no-data-handler, if non is present
+ * or an invalid one is set, it uses noJsonDataHandler
+ *
  * @param elem
  */
-function initElement(elem) {
-  var handlerName = elem.getAttribute(handlerAttributeName);
+window.handler.noHandler = function (elem) {
+  var dataHandlerName = elem.getAttribute('data-no-data-handler'),
+    dataHandler = window.dataHandlers.noJsonDataHandler;
 
-  if (typeof window.handlers[handlerName] === 'function') {
-    if (isDebugEnabled()) {
-      console.info('Executing `', handlerName, "` for element ", elem);
+  if (isDebugEnabled()) {
+    console.info("Datahandler: ", dataHandlerName);
+  }
+
+  if (typeof window.dataHandlers[dataHandlerName] === 'function') {
+    dataHandler = window.dataHandlers[dataHandlerName];
+  } else if (isDebugEnabled()) {
+    if (dataHandlerName !== null) {
+      console.error("Datahandler ", dataHandlerName, " is not a registered handler. Please register to window.dataHandlers");
+    } else {
+      console.info("Using default noJsonDataHandler");
     }
-    window.handlers[handlerName](elem);
-    elem.removeAttribute(handlerAttributeName);
-  } else {
-    console.error('Element ', elem, " has invalid handler `", handlerName, "`");
   }
-}
 
-/**
- * Finds all elements that have a data-no-handler attribute
- * and tries to find and run its handler
- * @param elem
- */
-function initializeHandlers (elem) {
-  var handlees = elem.querySelectorAll('[' + handlerAttributeName + ']'),
-    i;
-
-  for (i = 0; i < handlees.length; i += 1) {
-    initElement(handlees[i]);
-  }
-}
-
+  renderEndpoint(elem.getAttribute('data-no-url'), elem, elem.getAttribute('data-no-template'), dataHandler, function (elem) {
+    elem.removeAttribute('data-no-url');
+    elem.removeAttribute('data-no-template');
+    elem.removeAttribute('data-no-data-handler');
+  });
+};;
 afterDomLoads(function () {
   "use strict";
 
@@ -275,3 +242,44 @@ afterDomLoads(function () {
 
   initializeNoActAnguNo();
 });;
+/**
+ * Returns true or false, depending on whether or not a
+ * debug attribute (data-no-debug) has been placed on the
+ * body tag at the time of DOM load. Variable debugMode is
+ * set during initializeDebug().
+ *
+ * @returns {boolean}
+ */
+function isDebugEnabled () {
+  return debugMode;
+};
+/**
+ * Initializes one individual element
+ * @param elem
+ */
+function initElement(elem) {
+  var handlerName = elem.getAttribute(handlerAttributeName);
+
+  if (typeof window.handlers[handlerName] === 'function') {
+    if (isDebugEnabled()) {
+      console.info('Executing `', handlerName, "` for element ", elem);
+    }
+    window.handlers[handlerName](elem);
+    elem.removeAttribute(handlerAttributeName);
+  } else {
+    console.error('Element ', elem, " has invalid handler `", handlerName, "`");
+  }
+};
+/**
+ * Finds all elements that have a data-no-handler attribute
+ * and tries to find and run its handler
+ * @param elem
+ */
+function initializeHandlers (elem) {
+  var handlees = elem.querySelectorAll('[' + handlerAttributeName + ']'),
+    i;
+
+  for (i = 0; i < handlees.length; i += 1) {
+    initElement(handlees[i]);
+  }
+};
