@@ -6,6 +6,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <script>
       window.addEventListener('no-dom-loaded', function () {
+        /**
+         * Custom dataHandler newsDataHandler, which
+         * implements a limit feature on rendering an
+         * x amount of news items
+         *
+         * @param data
+         * @param elem
+         * @returns {Array}
+         */
         window.dataHandlers.newsDataHandler = function (data, elem) {
           var limitedData = [],
             jsonData = JSON.parse(data),

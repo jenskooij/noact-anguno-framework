@@ -1,32 +1,8 @@
 .news {
   padding: 1em;
 
-  @keyframes spinner {
-    to {
-      transform: rotate(360deg);
-    }
-  }
-
-  &.no-loading:before,
-  .no-loading:before {
-    display: block;
-    content: '';
-    box-sizing: border-box;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    border: 2px solid #cccccc;
-    border-top-color: #333333;
-    animation: spinner .6s linear infinite;
-    position: absolute;
-  }
-
   li.no-loading:before {
     margin-top: -1em;
-  }
-
-  .no-error {
-    background-color: #ff0000;
   }
 
   ul {

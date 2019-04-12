@@ -27,18 +27,18 @@ function renderEndpoint (url, elem, templatePath, dataHandler, callback) {
       }
     }
 
-    httpGetAsync(templatePath, function (data) {
-      elem.innerHTML = renderTemplate(data, templateOptionsData);
-      elem.className = classNameHolder;
+    getTemplate(templatePath, elem, function (success, html) {
+      if (success === false) {
+        elem.className = classNameHolder + ' no-error';
+      } else {
+        elem.innerHTML = renderTemplate(html, templateOptionsData);
+        elem.className = classNameHolder;
+      }
 
       if (typeof callback === 'function') {
         callback(elem);
-      }
-    }, function (data, status) {
-      console.error("Couldn't retrieve template from path: ", templatePath, ", status ", status);
-      elem.className = classNameHolder + ' no-error';
-      if (typeof callback === 'function') {
-        callback(elem);
+      } else if (isDebugEnabled()) {
+        console.error("Callback ", callback, " is not a function");
       }
     });
   }, function (data, status) {
@@ -46,6 +46,8 @@ function renderEndpoint (url, elem, templatePath, dataHandler, callback) {
     elem.className = classNameHolder + ' no-error';
     if (typeof callback === 'function') {
       callback(elem);
+    } else if (isDebugEnabled()) {
+      console.error("Callback ", callback, " is not a function");
     }
   });
 }

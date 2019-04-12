@@ -724,6 +724,25 @@ h1.title {
     font-family: "Montserrat", sans-serif;
     font-weight: 900; }
 
+@keyframes spinner {
+  to {
+    transform: rotate(360deg); } }
+
+.no-loading:before {
+  display: block;
+  content: '';
+  box-sizing: border-box;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid #cccccc;
+  border-top-color: #333333;
+  animation: spinner .6s linear infinite;
+  position: absolute; }
+
+.no-error {
+  background-color: #ff0000; }
+
 html {
   height: 100%; }
 
@@ -753,26 +772,8 @@ body, html {
 
 .news {
   padding: 1em; }
-
-@keyframes spinner {
-  to {
-    transform: rotate(360deg); } }
-  .news.no-loading:before,
-  .news .no-loading:before {
-    display: block;
-    content: '';
-    box-sizing: border-box;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    border: 2px solid #cccccc;
-    border-top-color: #333333;
-    animation: spinner .6s linear infinite;
-    position: absolute; }
   .news li.no-loading:before {
     margin-top: -1em; }
-  .news .no-error {
-    background-color: #ff0000; }
   .news ul {
     padding: 1em;
     list-style-type: disc; }

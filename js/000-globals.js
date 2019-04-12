@@ -10,7 +10,13 @@ var handlerAttributeName = 'data-no-handler',
    * @readonly
    * @type {boolean}
    */
-  debugMode = false;
+  debugMode = false,
+  /**
+   * Max age in seconds of the cache of templates
+   * Defaults to five minutes
+   * @type {number}
+   */
+  templateCacheMaxAge = 60 * 5;
 
 /**
  * An object on the window object containing all data handlers.

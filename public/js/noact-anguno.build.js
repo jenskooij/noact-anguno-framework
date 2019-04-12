@@ -11,7 +11,13 @@ var handlerAttributeName = 'data-no-handler',
    * @readonly
    * @type {boolean}
    */
-  debugMode = false;
+  debugMode = false,
+  /**
+   * Max age in seconds of the cache of templates
+   * Defaults to five minutes
+   * @type {number}
+   */
+  templateCacheMaxAge = 60 * 5;
 
 /**
  * An object on the window object containing all data handlers.
@@ -40,26 +46,27 @@ window.handlers = {};
  */
 window.callbacks = {};;
 /**
- * Asynchronously calls theUrl. When this is successful, calls
- * the callback, with the retrieved data as argument. If it fails,
- * calls the errorCallback with the data and status as arguments
+ * Function that executes is callback function executableFunction after
+ * the entire dom is loaded.
  *
- * @param theUrl string
- * @param callback function
- * @param errorCallback function
+ * @param executableFunction function
  */
-function httpGetAsync (theUrl, callback, errorCallback) {
+function afterDomLoads (executableFunction) {
   "use strict";
-  var xmlHttp = new XMLHttpRequest();
-  xmlHttp.onreadystatechange = function () {
-    if (xmlHttp.readyState === 4 && xmlHttp.status === 200) {
-      callback(xmlHttp.responseText);
-    } else if (xmlHttp.readyState === 4 && xmlHttp.status !== 200) {
-      errorCallback(xmlHttp.responseText, xmlHttp.status);
+  if (window.attachEvent) {
+    window.attachEvent('onload', executableFunction);
+  } else {
+    if (window.onload) {
+      var curronload = window.onload;
+      var newonload = function (evt) {
+        curronload(evt);
+        executableFunction(evt);
+      };
+      window.onload = newonload;
+    } else {
+      window.onload = executableFunction;
     }
-  };
-  xmlHttp.open("GET", theUrl, true); // true for asynchronous
-  xmlHttp.send(null);
+  }
 };
 /**
  * Renders html from template
@@ -84,29 +91,6 @@ function renderTemplate (html, options) {
   add(html.substr(cursor, html.length - cursor));
   code += 'return r.join("");';
   return new Function(code.replace(/[\r\t\n]/g, '')).apply(options);
-};
-/**
- * Function that executes is callback function executableFunction after
- * the entire dom is loaded.
- *
- * @param executableFunction function
- */
-function afterDomLoads (executableFunction) {
-  "use strict";
-  if (window.attachEvent) {
-    window.attachEvent('onload', executableFunction);
-  } else {
-    if (window.onload) {
-      var curronload = window.onload;
-      var newonload = function (evt) {
-        curronload(evt);
-        executableFunction(evt);
-      };
-      window.onload = newonload;
-    } else {
-      window.onload = executableFunction;
-    }
-  }
 };
 /**
  * Calls the url, renders the retrieved data on the given template,
@@ -137,18 +121,18 @@ function renderEndpoint (url, elem, templatePath, dataHandler, callback) {
       }
     }
 
-    httpGetAsync(templatePath, function (data) {
-      elem.innerHTML = renderTemplate(data, templateOptionsData);
-      elem.className = classNameHolder;
+    getTemplate(templatePath, elem, function (success, html) {
+      if (success === false) {
+        elem.className = classNameHolder + ' no-error';
+      } else {
+        elem.innerHTML = renderTemplate(html, templateOptionsData);
+        elem.className = classNameHolder;
+      }
 
       if (typeof callback === 'function') {
         callback(elem);
-      }
-    }, function (data, status) {
-      console.error("Couldn't retrieve template from path: ", templatePath, ", status ", status);
-      elem.className = classNameHolder + ' no-error';
-      if (typeof callback === 'function') {
-        callback(elem);
+      } else if (isDebugEnabled()) {
+        console.error("Callback ", callback, " is not a function");
       }
     });
   }, function (data, status) {
@@ -156,6 +140,8 @@ function renderEndpoint (url, elem, templatePath, dataHandler, callback) {
     elem.className = classNameHolder + ' no-error';
     if (typeof callback === 'function') {
       callback(elem);
+    } else if (isDebugEnabled()) {
+      console.error("Callback ", callback, " is not a function");
     }
   });
 };
@@ -177,57 +163,182 @@ function initElement(elem) {
   }
 };
 /**
- * Default dataHandler
- *
- * Used by noHandler, basically just json parses the data
- *
- * @param data
- * @returns {any}
- */
-window.dataHandlers.noJsonDataHandler = function (data, elem) {
-  return JSON.parse(data);
-};;
-/**
- * Default handler
- *
- * Retrives the url as passed in through the data-no-url attribute,
- * Renders the template from the data-no-template attribute
- * Optionally uses a set data handler in data-no-data-handler, if non is present
- * or an invalid one is set, it uses noJsonDataHandler
- *
+ * Finds all elements that have a data-no-handler attribute
+ * and tries to find and run its handler
  * @param elem
  */
-window.handlers.noHandler = function (elem) {
-  var dataHandlerName = elem.getAttribute('data-no-data-handler'),
-    dataHandler = window.dataHandlers.noJsonDataHandler,
-    callbackName = elem.getAttribute('data-no-callback'),
-    callback = window.callbacks.noCallback;
+function initializeHandlers (elem) {
+  var handlees = elem.querySelectorAll('[' + handlerAttributeName + ']'),
+    i;
+
+  for (i = 0; i < handlees.length; i += 1) {
+    initElement(handlees[i]);
+  }
+};
+/**
+ * JavaScript implementation of Java's String.hashCode method
+ *
+ * @source https://werxltd.com/wp/2010/05/13/javascript-implementation-of-javas-string-hashcode-method/
+ * @param stringToBeHashed
+ * @returns {number}
+ */
+function hashCode(stringToBeHashed) {
+  var hash = 0, i, chr;
+  if (stringToBeHashed.length === 0) return hash;
+  for (i = 0; i < stringToBeHashed.length; i++) {
+    chr   = stringToBeHashed.charCodeAt(i);
+    hash  = ((hash << 5) - hash) + chr;
+    hash |= 0; // Convert to 32bit integer
+  }
+  return hash;
+};
+/**
+ * Feature detection for local storage
+ *
+ * @source https://developer.mozilla.org/en-US/docs/Web/API/Web_Storage_API/Using_the_Web_Storage_API
+ * @param type
+ * @returns {boolean|boolean|*}
+ */
+function storageAvailable(type) {
+  var storage;
+  try {
+    storage = window[type];
+    var x = '__storage_test__';
+    storage.setItem(x, x);
+    storage.removeItem(x);
+    return true;
+  }
+  catch(e) {
+    return e instanceof DOMException && (
+        // everything except Firefox
+      e.code === 22 ||
+      // Firefox
+      e.code === 1014 ||
+      // test name field too, because code might not be present
+      // everything except Firefox
+      e.name === 'QuotaExceededError' ||
+      // Firefox
+      e.name === 'NS_ERROR_DOM_QUOTA_REACHED') &&
+      // acknowledge QuotaExceededError only if there's something already stored
+      (storage && storage.length !== 0);
+  }
+};
+/**
+ * Returns true or false, depending on whether or not a
+ * debug attribute (data-no-debug) has been placed on the
+ * body tag at the time of DOM load. Variable debugMode is
+ * set during initializeDebug().
+ *
+ * @returns {boolean}
+ */
+function isDebugEnabled () {
+  return debugMode;
+};
+/**
+ * Retrieves the template
+ *
+ * @param templatePath
+ * @param elem
+ * @param callback
+ */
+function getTemplate (templatePath, elem, callback) {
+  var templateHash = hashCode(templatePath),
+    templateCacheKey = "tmpl:" + templateHash,
+    templateCacheTimestampKey = templateCacheKey + ":ts";
 
   if (isDebugEnabled()) {
-    console.info("Datahandler: ", dataHandlerName);
-  }
+    console.info("Wont use cache for templates, because debugMode = true.");
+    httpGetAsync(templatePath, function (html) {
+      if (typeof callback === 'function') {
+        callback(true, html);
+      }
+    }, function (html, status) {
+      console.error("Couldn't retrieve template from path: ", templatePath, ", status ", status);
+      if (typeof callback === 'function') {
+        callback(false, html);
+      }
+    });
+  } else {
+    if (storageAvailable('localStorage')) {
+      // check storage
+      if (!localStorage.getItem(templateCacheKey) && !localStorage.getItem(templateCacheTimestampKey)) {
+        // populate storage
+        populateStorage(templatePath, templateCacheKey, templateCacheTimestampKey, callback);
+      } else {
+        // check storage
+        var templateCacheTimestamp = parseInt(localStorage.getItem(templateCacheTimestampKey)),
+          currentTimestamp = getCurrentTimestamp(),
+          cacheAge = currentTimestamp - templateCacheTimestamp;
 
-  if (typeof window.dataHandlers[dataHandlerName] === 'function') {
-    dataHandler = window.dataHandlers[dataHandlerName];
-  } else if (isDebugEnabled()) {
-    if (dataHandlerName !== null) {
-      console.error("Datahandler ", dataHandlerName, " is not a registered handler. Please register to window.dataHandlers");
-    } else {
-      console.info("Using default noJsonDataHandler");
+        if (cacheAge > templateCacheMaxAge) {
+          if (isDebugEnabled()) {
+            console.info("Cache expired for ", templatePath, ", renewing cache");
+          }
+
+          populateStorage(templatePath, templateCacheKey, templateCacheTimestampKey, callback);
+        } else {
+          if (isDebugEnabled()) {
+            console.info("Cache for ", templatePath, " is recent, use it.");
+          }
+          callback(true, localStorage.getItem(templateCacheKey));
+        }
+      }
+
+    } else if (isDebugEnabled()) {
+      console.error("No localStorage available.");
     }
   }
 
-  if (typeof window.callbacks[callbackName] === 'function') {
-    callback = window.callbacks[callbackName];
-  } else if (isDebugEnabled()) {
-    if (callbackName !== null) {
-      console.error("Callback ", callbackName, " is not a registered callback. Please register to window.callbacks");
-    } else {
-      console.info("Using default noCallback");
-    }
-  }
 
-  renderEndpoint(elem.getAttribute('data-no-url'), elem, elem.getAttribute('data-no-template'), dataHandler, callback);
+
+}
+
+function getCurrentTimestamp() {
+  return Math.floor(new Date().valueOf() / 1000);
+}
+
+function populateStorage (templatePath, templateCacheKey, templateCacheTimestampKey, callback) {
+  httpGetAsync(templatePath, function (html) {
+    if (typeof callback === 'function') {
+      localStorage.setItem(templateCacheKey, html);
+      localStorage.setItem(templateCacheTimestampKey, getCurrentTimestamp().toString());
+      callback(true, html);
+    }
+  }, function (html, status) {
+    console.error("Couldn't retrieve template from path: ", templatePath, ", status ", status);
+    if (typeof callback === 'function') {
+      callback(false, html);
+    }
+  });
+};
+/**
+ * Asynchronously calls theUrl. When this is successful, calls
+ * the callback, with the retrieved data as argument. If it fails,
+ * calls the errorCallback with the data and status as arguments
+ *
+ * @param theUrl string
+ * @param callback function
+ * @param errorCallback function
+ */
+function httpGetAsync (theUrl, callback, errorCallback) {
+  "use strict";
+  var xmlHttp = new XMLHttpRequest();
+  xmlHttp.onreadystatechange = function () {
+    if (xmlHttp.readyState === 4 && xmlHttp.status === 200) {
+      callback(xmlHttp.responseText);
+    } else if (xmlHttp.readyState === 4 && xmlHttp.status !== 200) {
+      errorCallback(xmlHttp.responseText, xmlHttp.status);
+    }
+  };
+  xmlHttp.open("GET", theUrl, true); // true for asynchronous
+  xmlHttp.send(null);
+};
+window.callbacks.noCallback = function (elem) {
+  elem.removeAttribute('data-no-url');
+  elem.removeAttribute('data-no-template');
+  elem.removeAttribute('data-no-data-handler');
+  elem.removeAttribute('data-no-callback');
+  initializeHandlers(elem); // Makes sure that the rendered HTML also gets treated by the framework
 };;
 afterDomLoads(function () {
   "use strict";
@@ -277,33 +388,55 @@ afterDomLoads(function () {
   initializeNoActAnguNo();
 });;
 /**
- * Returns true or false, depending on whether or not a
- * debug attribute (data-no-debug) has been placed on the
- * body tag at the time of DOM load. Variable debugMode is
- * set during initializeDebug().
+ * Default handler
  *
- * @returns {boolean}
- */
-function isDebugEnabled () {
-  return debugMode;
-};
-/**
- * Finds all elements that have a data-no-handler attribute
- * and tries to find and run its handler
+ * Retrives the url as passed in through the data-no-url attribute,
+ * Renders the template from the data-no-template attribute
+ * Optionally uses a set data handler in data-no-data-handler, if non is present
+ * or an invalid one is set, it uses noJsonDataHandler
+ *
  * @param elem
  */
-function initializeHandlers (elem) {
-  var handlees = elem.querySelectorAll('[' + handlerAttributeName + ']'),
-    i;
+window.handlers.noHandler = function (elem) {
+  var dataHandlerName = elem.getAttribute('data-no-data-handler'),
+    dataHandler = window.dataHandlers.noJsonDataHandler,
+    callbackName = elem.getAttribute('data-no-callback'),
+    callback = window.callbacks.noCallback;
 
-  for (i = 0; i < handlees.length; i += 1) {
-    initElement(handlees[i]);
+  if (isDebugEnabled()) {
+    console.info("Datahandler: ", dataHandlerName);
   }
-};
-window.callbacks.noCallback = function (elem) {
-  elem.removeAttribute('data-no-url');
-  elem.removeAttribute('data-no-template');
-  elem.removeAttribute('data-no-data-handler');
-  elem.removeAttribute('data-no-callback');
-  initializeHandlers(elem); // Makes sure that the rendered HTML also gets treated by the framework
+
+  if (typeof window.dataHandlers[dataHandlerName] === 'function') {
+    dataHandler = window.dataHandlers[dataHandlerName];
+  } else if (isDebugEnabled()) {
+    if (dataHandlerName !== null) {
+      console.error("Datahandler ", dataHandlerName, " is not a registered handler. Please register to window.dataHandlers");
+    } else {
+      console.info("Using default noJsonDataHandler");
+    }
+  }
+
+  if (typeof window.callbacks[callbackName] === 'function') {
+    callback = window.callbacks[callbackName];
+  } else if (isDebugEnabled()) {
+    if (callbackName !== null) {
+      console.error("Callback ", callbackName, " is not a registered callback. Please register to window.callbacks");
+    } else {
+      console.info("Using default noCallback");
+    }
+  }
+
+  renderEndpoint(elem.getAttribute('data-no-url'), elem, elem.getAttribute('data-no-template'), dataHandler, callback);
+};;
+/**
+ * Default dataHandler
+ *
+ * Used by noHandler, basically just json parses the data
+ *
+ * @param data
+ * @returns {any}
+ */
+window.dataHandlers.noJsonDataHandler = function (data, elem) {
+  return JSON.parse(data);
 };;
