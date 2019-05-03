@@ -10,7 +10,6 @@ Noact-Anguno aims to be a simplified, lightweight javascript framework that is e
 ``` html
 <div class="news"
          data-no-handler="noHandler"
-         data-no-url="https://www.kngf.nl/api/news"
-         data-no-template="no-templates/news.html"
-         data-no-data-handler="noJsonHandler"></div>
+         data-no-url="https://hacker-news.firebaseio.com/v0/topstories.json"
+         data-no-template="no-templates/news.html"></div>
 ```
